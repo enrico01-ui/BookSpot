@@ -1,0 +1,102 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
+@theme {
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+
+  --color-ink: #0D1F1A;
+  --color-ink-soft: #17352C;
+  --color-primary: #0E7C66;
+  --color-primary-dark: #0A5C4C;
+  --color-accent: #D4F36B;
+
+  --color-canvas: #F2F5F1;
+  --color-surface: #FFFFFF;
+  --color-line: #DCE5E0;
+  --color-line-strong: #C5D3CC;
+  --color-muted: #4B5F58;
+  --color-on-dark: #B9CCC4;
+  --color-danger: #B91C1C;
+
+  --color-pending-bg: #FEF3C7;   --color-pending-fg: #92400E;
+  --color-confirmed-bg: #DCFCE7; --color-confirmed-fg: #166534;
+  --color-completed-bg: #DBEAFE; --color-completed-fg: #1E40AF;
+  --color-cancelled-bg: #FEE2E2; --color-cancelled-fg: #991B1B;
+  --color-expired-bg: #E5E7EB;   --color-expired-fg: #374151;
+}
+:root {
+  font-family: Inter, Arial, sans-serif;
+
+  background: #ffffff;
+
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+ 
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+
+button
+  {
+    font-family: Inter, Arial, sans-serif;
+  }
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
