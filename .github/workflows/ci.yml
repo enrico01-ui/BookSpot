@@ -14,7 +14,22 @@ jobs:
     name: Backend Tests
     runs-on: ubuntu-latest
 
+    
     services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bookspot_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bookspot_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
       redis:
         image: redis:7-alpine
         ports:
@@ -24,7 +39,7 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
-          
+
     defaults:
       run:
         working-directory: backend
@@ -61,6 +76,11 @@ jobs:
 
       - name: Generate Prisma Client
         run: npx prisma generate
+      
+      
+      - name: Run database migrations
+        run: node --env-file=.env.test ./node_modules/prisma/build/index.js migrate deploy
+
 
       - name: Run backend tests
         run: npm test
