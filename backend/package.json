@@ -6,10 +6,12 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test:db:migrate": "dotenv -e .env.test -- prisma migrate deploy",
-    "test": "dotenv -e .env.test -- vitest run",
-    "test:watch": "dotenv -e .env.test -- vitest",
-    "test:int": "dotenv -e .env.test -- vitest run"
+    
+    "test:db:migrate": "node --env-file=.env.test ./node_modules/prisma/build/index.js migrate deploy",
+    "test": "node --env-file=.env.test ./node_modules/vitest/vitest.mjs run",
+    "test:watch": "node --env-file=.env.test ./node_modules/vitest/vitest.mjs",
+    "test:int": "node --env-file=.env.test ./node_modules/vitest/vitest.mjs run"
+
   },
   "keywords": [],
   "author": "",
