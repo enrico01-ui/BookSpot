@@ -29,6 +29,19 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
+      
+      - name: Create test environment
+        shell: bash
+        run: |
+          cat > .env.test <<'EOF'
+          NODE_ENV=test
+          PORT=4000
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5434/bookspot_test
+          REDIS_URL=redis://localhost:6379
+          CORS_ORIGIN=http://localhost:5173
+          EOF
+
+
       - name: Install dependencies
         run: npm ci
 
