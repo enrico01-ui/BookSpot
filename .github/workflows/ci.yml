@@ -36,10 +36,13 @@ jobs:
           cat > .env.test <<'EOF'
           NODE_ENV=test
           PORT=4000
-          DATABASE_URL=postgresql://postgres:postgres@localhost:5434/bookspot_test
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/bookspot_test
           REDIS_URL=redis://localhost:6379
           CORS_ORIGIN=http://localhost:5173
+          JWT_SECRET=ci-only-jwt-secret-not-for-production
+          REFRESH_SECRET=ci-only-refresh-secret-not-for-production
           EOF
+
 
 
       - name: Install dependencies
