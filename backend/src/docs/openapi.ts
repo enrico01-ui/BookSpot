@@ -20,6 +20,10 @@ export const openapiSpec = {
       name: "Auth",
       description: "Authentication and user session endpoints",
     },
+    {
+      name: "Venues",
+      description: "Venue management endpoints",
+    },
   ],
 
   components: {
@@ -80,6 +84,48 @@ export const openapiSpec = {
           },
         },
       },
+       CreateVenueRequest: {
+        type: "object",
+        required: ["name", "address", "city"],
+        properties: {
+          name: { type: "string", minLength: 3, maxLength: 100, example: "GOR Futsal Sentosa" },
+          address: { type: "string", minLength: 5, example: "Jl. Merdeka No. 45" },
+          city: { type: "string", minLength: 2, example: "Jakarta" },
+          latitude: { type: "number", minimum: -90, maximum: 90, nullable: true, example: -6.2088 },
+          longitude: { type: "number", minimum: -180, maximum: 180, nullable: true, example: 106.8456 },
+          description: { type: "string", maxLength: 1000, nullable: true, example: "Lapangan futsal rumput sintetis standar internasional." },
+        },
+      },
+
+      UpdateVenueRequest: {
+        type: "object",
+        properties: {
+          name: { type: "string", minLength: 3, maxLength: 100, example: "GOR Futsal Sentosa Renovation" },
+          address: { type: "string", minLength: 5, example: "Jl. Merdeka No. 46" },
+          city: { type: "string", minLength: 2, example: "Jakarta Selatan" },
+          latitude: { type: "number", minimum: -90, maximum: 90, nullable: true, example: -6.2088 },
+          longitude: { type: "number", minimum: -180, maximum: 180, nullable: true, example: 106.8456 },
+          description: { type: "string", maxLength: 1000, nullable: true, example: "Deskripsi venue diperbarui." },
+        },
+      },
+
+      VenueResponse: {
+        type: "object",
+        properties: {
+          id: { type: "integer", example: 1 },
+          name: { type: "string", example: "GOR Futsal Sentosa" },
+          address: { type: "string", example: "Jl. Merdeka No. 45" },
+          city: { type: "string", example: "Jakarta" },
+          latitude: { type: "number", nullable: true, example: -6.2088 },
+          longitude: { type: "number", nullable: true, example: 106.8456 },
+          description: { type: "string", nullable: true, example: "Lapangan futsal rumput sintetis." },
+          status: { type: "string", enum: ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "SUSPENDED", "REJECTED"], example: "DRAFT" },
+          ownerId: { type: "integer", example: 5 },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      }, 
+
     },
   },
 
@@ -247,6 +293,119 @@ export const openapiSpec = {
           },
         },
       }
-    }
+    },
+    "/api/venues": {
+      post: {
+        tags: ["Venues"],
+        summary: "Create a new venue",
+        description: "Allowed roles: ADMIN, OWNER",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateVenueRequest" },
+            },
+          },
+        },
+        responses: {
+          "201": { description: "Venue created successfully." },
+          "400": { description: "Invalid request data." },
+          "401": { description: "Unauthorized." },
+          "403": { description: "Forbidden." },
+        },
+      },
+      get: {
+        tags: ["Venues"],
+        summary: "Get list of venues",
+        description: "Allowed roles: ADMIN, OWNER, USER",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "query", name: "ownerId", schema: { type: "integer" }, description: "Filter by owner ID" },
+          { in: "query", name: "status", schema: { type: "string", enum: ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "SUSPENDED", "REJECTED"] }, description: "Filter by status" },
+          { in: "query", name: "city", schema: { type: "string" }, description: "Filter by city" },
+          { in: "query", name: "page", schema: { type: "integer", default: 1 }, description: "Page number" },
+          { in: "query", name: "limit", schema: { type: "integer", default: 10 }, description: "Items per page" },
+        ],
+        responses: {
+          "200": { description: "Venues retrieved successfully." },
+          "401": { description: "Unauthorized." },
+        },
+      },
+    },
+
+    "/api/venues/{id}": {
+      get: {
+        tags: ["Venues"],
+        summary: "Get venue by ID",
+        description: "Allowed roles: ADMIN, OWNER, USER",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: "path",
+            name: "id",
+            required: true,
+            schema: { type: "integer" },
+            description: "Venue ID",
+          },
+        ],
+        responses: {
+          "200": { description: "Venue details retrieved successfully." },
+          "401": { description: "Unauthorized." },
+          "404": { description: "Venue not found." },
+        },
+      },
+      put: {
+        tags: ["Venues"],
+        summary: "Update venue by ID",
+        description: "Allowed roles: ADMIN, OWNER",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: "path",
+            name: "id",
+            required: true,
+            schema: { type: "integer" },
+            description: "Venue ID",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UpdateVenueRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Venue updated successfully." },
+          "400": { description: "Invalid request data." },
+          "401": { description: "Unauthorized." },
+          "403": { description: "Forbidden." },
+          "404": { description: "Venue not found." },
+        },
+      },
+      delete: {
+        tags: ["Venues"],
+        summary: "Delete venue by ID",
+        description: "Allowed roles: ADMIN, OWNER",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: "path",
+            name: "id",
+            required: true,
+            schema: { type: "integer" },
+            description: "Venue ID",
+          },
+        ],
+        responses: {
+          "200": { description: "Venue deleted successfully." },
+          "401": { description: "Unauthorized." },
+          "403": { description: "Forbidden." },
+          "404": { description: "Venue not found." },
+        },
+      },
+    },
   },
 };
