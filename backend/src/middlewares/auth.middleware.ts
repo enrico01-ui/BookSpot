@@ -4,17 +4,22 @@ import { ZodError } from "zod";
 import { AppError } from "../errors/appError.js";
 import { env } from "../config/env.js";
 
-export const authenticate = (req: Request, res: Response, next: NextFunction) => {
-    const authHeader = req.headers.authorization;
+const extractToken = (req: Request): string | null => {
+  const header = req.headers.authorization;
+  if (header?.startsWith("Bearer ")) return header.slice(7);
 
-    if (!authHeader) {
-        throw new AppError("Authorization header is missing", 401);
+  return null;
+};
+
+export const authenticate = (req: Request, res: Response, next: NextFunction) => {
+     const token = extractToken(req);
+    if (!token) {
+      throw new AppError("Authorization header is missing or malformed", 401);
     }
 
-    const token = authHeader.split(" ")[1];
 
     try {
-        const decoded = jwt.verify(token || "", env.JWT_SECRET);
+        const decoded = jwt.verify(token || "", env.JWT_SECRET, { algorithms: ["HS256"] });
         (req as any).user = decoded;
         next();
     } catch (error) {

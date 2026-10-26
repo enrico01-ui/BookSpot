@@ -43,6 +43,9 @@ export const updateUser = async (req: Request, res: Response) => {
 export const loginUser = async (req: Request, res: Response) => {
   try {
     const user = await loginService(req.body);
+    if (req.header('X-Client') === 'mobile') {
+        return res.json({ user, accessToken: user.token, refreshToken: user.refreshToken });
+    }
     res.cookie(
       REFRESH_COOKIE_NAME,
       user.refreshToken,
