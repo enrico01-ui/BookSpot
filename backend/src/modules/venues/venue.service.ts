@@ -2,12 +2,28 @@
 import {CreateVenueInput, UpdateVenueInput, GetVenuesInput, VenueIdParam} from "./venue.schema.js";
 import { AppError } from "../../errors/appError.js";
 import { prisma } from "../../lib/prisma.js";
+import { Prisma } from "../../generated/prisma/browser.js";
 
-export const createVenueService = async (data: CreateVenueInput, userId: number) => {
-    try{
-        const venue = await prisma.venue.create({
+export interface Actor {
+    id: number;
+    role: "OWNER" | "ADMIN" | "CUSTOMER";
+}
+
+const manageableVenue = (id: number, actor: Actor): Prisma.VenueWhereUniqueInput =>
+  actor.role === "ADMIN"
+    ? { id, deletedAt: null }
+    : { id, ownerId: actor.id, deletedAt: null };
+
+const visibleTo = (actor?: Actor): Prisma.VenueWhereInput => {
+  if (actor?.role === "ADMIN") return {};
+  if (actor) return { OR: [{ status: "PUBLISHED" }, { ownerId: actor.id }] };
+  return { status: "PUBLISHED" };
+};
+
+export const createVenueService = async (data: CreateVenueInput, actor: Actor) => {
+    const venue = await prisma.venue.create({
         data: {
-            ownerId: userId,
+            ownerId: actor.id,
             name: data.name,
             address: data.address,
             city: data.city,
@@ -17,94 +33,58 @@ export const createVenueService = async (data: CreateVenueInput, userId: number)
         },
     });
     return venue;
-    } catch (error) {
-        throw new AppError("Error creating venue", 500);
-    }
 }
 
-export const getVenuesService = async (query: GetVenuesInput) => {
-    try{
-        const { ownerId, status, city, page, limit } = query;
-        const where: any = {};
-        if (ownerId) where.ownerId = ownerId;
-        if (status) where.status = status;
-        if (city) where.city = city;
-        const venues = await prisma.venue.findMany({
+export const getVenuesService = async (query: GetVenuesInput, actor?: Actor) => {
+    const { ownerId, status, city, page, limit } = query;
+    if (page < 1 || limit < 1) {
+        throw new AppError("Page and limit must be positive integers", 400);
+    }
+    
+    const where: Prisma.VenueWhereInput = {
+        deletedAt: null,
+        AND: [visibleTo(actor)],
+        ...(ownerId ? { ownerId } : {}),
+        ...(status ? { status } : {}),
+        ...(city ? { city: { contains: city, mode: "insensitive" } } : {}),
+    }
+    const[ venues, total] = await prisma.$transaction([
+        prisma.venue.findMany({
             where,
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }], // urutan stabil untuk pagination
             skip: (page - 1) * limit,
             take: limit,
-        });
-        return venues;
-    } catch (error) {
-        throw new AppError("Error fetching venues", 500);
-    }
+        }),
+        prisma.venue.count({ where })
+    ])
+    return { venues, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
 }
 
-export const getVenueByIdService = async (id: VenueIdParam) => {
-    try{
-        const venue = await prisma.venue.findUnique({
-            where: { id: id.id },
-        });
-        if (!venue) {
-            throw new AppError("Venue not found", 404);
-        }
-        return venue;
-    } catch (error) {
-        throw new AppError("Error fetching venue by ID", 500);
-    }
-}
+export const getVenueByIdService = async ({ id }: VenueIdParam, actor?: Actor) => {
+  const venue = await prisma.venue.findFirst({
+    where: { id, deletedAt: null, AND: [visibleTo(actor)] },
+  });
+  if (!venue) throw new AppError("Venue not found", 404);
+  return venue;
+};
 
-export const updateVenueService = async (id: VenueIdParam, data: UpdateVenueInput) => {
-    try {
-        // 1. Validasi keberadaan ID sebelum melakukan update
-       if (!id?.id) {
-        throw new AppError('Venue ID is required', 400);
-        }
+// Satu query: kepemilikan ada di klausa where. Bukan pemilik / tidak ada / sudah dihapus
+// → Prisma P2025 → error handler global memetakannya ke 404.
+export const updateVenueService = ({ id }: VenueIdParam, data: UpdateVenueInput, actor: Actor) =>
+  prisma.venue.update({ where: manageableVenue(id, actor), data: {
+    ...(data.name !== undefined ? { name: data.name } : {}),
+    ...(data.address !== undefined ? { address: data.address } : {}),
+    ...(data.city !== undefined ? { city: data.city } : {}),
+    ...(data.latitude !== undefined ? { latitude: data.latitude } : {}),
+    ...(data.longitude !== undefined ? { longitude: data.longitude } : {}),
+    ...(data.description !== undefined ? { description: data.description } : {}),
+  }  });
 
-        // 1. Cek keberadaan record sebelum update (menangani P2025 secara langsung)
-        const existingVenue = await prisma.venue.findUnique({
-        where: { id: id.id },
-        });
-
-        if (!existingVenue || existingVenue.deletedAt !== null) {
-        throw new AppError('Venue not found', 404);
-        }
-
-        // 2. Jalankan update
-        const venue = await prisma.venue.update({
-        where: { id: id.id },
-        data: {
-            name: data.name ?? existingVenue.name,
-            address: data.address ?? existingVenue.address,
-            city: data.city ?? existingVenue.city,
-            latitude: data.latitude ?? existingVenue.latitude,
-            longitude: data.longitude ?? existingVenue.longitude,
-            description: data.description ?? existingVenue.description,
-        }
-        });
-
-        return venue;
-    } catch (error) {
-
-        
-        // 3. Menangani custom AppError yang dilempar dari blok try
-        if (error instanceof AppError) {
-        throw error;
-        }
-
-        // 4. Meneruskan pesan error asli (opsional) untuk mempermudah debugging internal
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        throw new AppError(`Error updating venue: ${errorMessage}`, 500);
-    }
-}
-
-export const deleteVenueService = async (id: VenueIdParam) => {
-    try{
-        await prisma.venue.delete({
-            where: { id: id.id },
-        })
-        return { message: "Venue deleted successfully" };
-    }catch (error) {    
-        throw new AppError("Error deleting venue", 500);
-    }
-}
+export const deleteVenueService = async ({ id }: VenueIdParam, actor: Actor) => {
+  // TODO (Sprint 3): tolak bila masih ada booking mendatang
+  await prisma.venue.update({
+    where: manageableVenue(id, actor),
+    data: { deletedAt: new Date() },
+    select: { id: true },
+  });
+};

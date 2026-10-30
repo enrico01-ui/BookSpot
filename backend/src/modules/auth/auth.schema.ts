@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { UserRole } from "../../generated/prisma/enums.js";
 
 export const registerSchema = z.object({
   name: z.string().min(1),

@@ -5,9 +5,12 @@ import cors from "cors";
 import helmet from "helmet";
 import { redis } from "./lib/redis.js";
 import AuthRoutes from "./modules/auth/auth.routes.js";
+import VenueRoutes from "./modules/venues/venue.routes.js";
 import swaggerUi from "swagger-ui-express";
 import { openapiSpec } from "./docs/openapi.js";
 import cookieParser from "cookie-parser";
+import { errorHandler } from "./middlewares/error.middleware.js";
+import { AppError } from "./errors/appError.js";
 
 
 export const app = express();
@@ -62,3 +65,9 @@ app.use("/api/ready", async (_req, res) => {
     }
 })
 app.use("/api/auth", AuthRoutes);
+app.use("/api/venues", VenueRoutes);
+
+app.use((_req, _res, next) => next(new AppError("Endpoint tidak ditemukan", 404)));
+
+// 2) PALING TERAKHIR
+app.use(errorHandler);

@@ -1,45 +1,42 @@
-import {Response, Request} from "express";
-import {createVenueService, getVenuesService, getVenueByIdService, updateVenueService, deleteVenueService} from "./venue.service.js";
-import {createVenueSchema, updateVenueSchema, getVenuesSchema, venueIdParamSchema} from "./venue.schema.js";
+import type { Request, Response } from "express";
+import { AppError } from "../../errors/appError.js";
+import type { CreateVenueInput, GetVenuesInput, UpdateVenueInput, VenueIdParam } from "./venue.schema.js";
+import {
+  createVenueService,
+  deleteVenueService,
+  getVenueByIdService,
+  getVenuesService,
+  updateVenueService,
+  type Actor,
+} from "./venue.service.js";
 
-export const createVenue = async (req: Request, res: Response) => {
-    if(!req.user || typeof req.user.sub !== "number") {
-        return res.status(401).json({ message: "Unauthorized" });
-    }
-    const venue = await createVenueService(req.body, req.user.sub);
-    res.status(201).json({
-        message: "Venue created successfully",
-        venue,
-    });
-}
+const toActor = (user: Request["user"]): Actor | undefined =>
+  user && typeof user.sub === "number" ? { id: user.sub, role: user.role } : undefined;
 
-export const getVenues = async (req: Request, res: Response) => {
-    const venues = await getVenuesService(req.query as any);
-    res.status(200).json({
-        message: "Venues fetched successfully",
-        venues,
-    });
-}
+const requireActor = (user: Request["user"]): Actor => {
+  const actor = toActor(user);
+  if (!actor) throw new AppError("Unauthorized", 401);
+  return actor;
+};
 
-export const getVenueById = async (req: Request, res: Response) => {
-    const venue = await getVenueByIdService(req.params as any);
-    res.status(200).json({
-        message: "Venue fetched successfully",
-        venue,
-    });
-}
+export const createVenue = async (req: Request<unknown, unknown, CreateVenueInput>, res: Response) => {
+  const venue = await createVenueService(req.body, requireActor(req.user));
+  res.status(201).json({ venue });
+};
 
-export const updateVenue = async (req: Request, res: Response) => {
-    const venue = await updateVenueService(req.params as any, req.body);
-    res.status(200).json({
-        message: "Venue updated successfully",
-        venue,
-    });
-}
-    
-export const deleteVenue = async (req: Request, res: Response) => {
-    await deleteVenueService(req.params as any);
-    res.status(200).json({
-        message: "Venue deleted successfully",
-    });
-}
+export const getVenues = async (req: Request<unknown, unknown, unknown, GetVenuesInput>, res: Response) => {
+  res.json(await getVenuesService(req.query, toActor(req.user))); // { items, meta }
+};
+
+export const getVenueById = async (req: Request<VenueIdParam>, res: Response) => {
+  res.json({ venue: await getVenueByIdService(req.params, toActor(req.user)) });
+};
+
+export const updateVenue = async (req: Request<VenueIdParam, unknown, UpdateVenueInput>, res: Response) => {
+  res.json({ venue: await updateVenueService(req.params, req.body, requireActor(req.user)) });
+};
+
+export const deleteVenue = async (req: Request<VenueIdParam>, res: Response) => {
+  await deleteVenueService(req.params, requireActor(req.user));
+  res.status(204).send();
+};
