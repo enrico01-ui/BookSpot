@@ -2,11 +2,15 @@ import { redis } from "../lib/redis.js";
 import {rateLimit} from "express-rate-limit";
 import { RedisStore} from "rate-limit-redis";
 
+const isTest = process.env.NODE_ENV === "test";
 
+function getRateLimit(){
+    return isTest ? 1000 : 5;
+}
 
 export const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 5,
+    limit: getRateLimit(),
 
     standardHeaders: "draft-8",
     legacyHeaders: false,
@@ -22,7 +26,7 @@ export const loginLimiter = rateLimit({
 
 export const refreshLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 10,
+    limit: getRateLimit(),
 
     standardHeaders: "draft-8",
     legacyHeaders: false,
@@ -38,7 +42,7 @@ export const refreshLimiter = rateLimit({
 
 export const registerLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
-    limit: 10,
+    limit: getRateLimit(),
 
     standardHeaders: "draft-8",
     legacyHeaders: false,
