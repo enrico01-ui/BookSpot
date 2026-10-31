@@ -382,10 +382,54 @@ describe("Pagination", () => {
     expect((await request(app).get("/api/venues?limit=0")).status).toBe(400);
   });
 });
+describe("Sorting", () => {
+  it("sortBy=name&sortOrder=asc → urutan A-Z", async () => {
+    const res = await request(app).get(`/api/venues?city=${PAGE_CITY}&sortBy=name&sortOrder=asc&limit=50`);
+    expect(res.status).toBe(200);
+    const names = res.body.venues.map((v: { name: string }) => v.name);
+    const sorted = [...names].sort((a, b) => a.localeCompare(b));
+    expect(names).toEqual(sorted);
+  });
+  it("sortBy=name&sortOrder=desc → urutan Z-A", async () => {
+    const res = await request(app).get(`/api/venues?city=${PAGE_CITY}&sortBy=name&sortOrder=desc&limit=50`);
+    expect(res.status).toBe(200);
+    const names = res.body.venues.map((v: { name: string }) => v.name);
+    const sorted = [...names].sort((a, b) => b.localeCompare(a));
+    
+    expect(names).toEqual(sorted);
+  });
+  it("sortBy=createdAt&sortOrder=asc → urutan lama ke baru", async () => {
+    const res = await request(app).get(`/api/venues?city=${PAGE_CITY}&sortBy=createdAt&sortOrder=asc&limit=50`);
+    expect(res.status).toBe(200);
+    const createdAts = res.body.venues.map((v: { createdAt: string }) => new Date(v.createdAt).getTime());
+    const sorted = [...createdAts].sort((a, b) => a - b);
+    expect(createdAts).toEqual(sorted);
+  });
+  it("sortBy=createdAt&sortOrder=desc → urutan baru ke lama", async () => {
+    const res = await request(app).get(`/api/venues?city=${PAGE_CITY}&sortBy=createdAt&sortOrder=desc&limit=50`);
+    expect(res.status).toBe(200);
+    const createdAts = res.body.venues.map((v: { createdAt: string }) => new Date(v.createdAt).getTime());
+    const sorted = [...createdAts].sort((a, b) => b - a);
+    expect(createdAts).toEqual(sorted);
+  });
+});
+
+describe("Filtering", () => {
+  it("filter by name → hanya yang mengandung substring (case-insensitive)", async () => {
+    const res = await request(app).get(`/api/venues?city=${PAGE_CITY}&name=1&limit=50`);
+    expect(res.status).toBe(200);
+    expect(res.body.venues.every((v: { name: string }) => v.name.toLowerCase().includes("1"))).toBe(true);
+  });
+  
+it("filter by type → hanya yang mengandung substring (case-insensitive)", async () => {
+    const res = await request(app).get(`/api/venues?city=${PAGE_CITY}&type=conference&limit=50`);
+    expect(res.status).toBe(200);
+    expect(res.body.venues.every((v: { type: string }) => v.type.toLowerCase().includes("conference"))).toBe(true);
+  })
+});
 
 /* Item yang belum diterapkan: akan menjadi test setelah kodenya ada. */
 describe("belum diterapkan", () => {
-  it.todo("limit dibatasi maksimum (mis. 50) agar tidak bisa meminta ribuan baris sekaligus");
   it.todo("POST dan PATCH menolak field yang tidak dikenal (.strict())");
   it.todo("PATCH dengan body kosong ditolak (minimal satu field)");
   it.todo("DELETE ditolak bila venue punya booking mendatang (Sprint 3, Card 14)");
