@@ -36,7 +36,7 @@ export const createVenueService = async (data: CreateVenueInput, actor: Actor) =
 }
 
 export const getVenuesService = async (query: GetVenuesInput, actor?: Actor) => {
-    const { ownerId, status, city, page, limit } = query;
+    const { ownerId, status, city, page, limit, name, type, sortBy, sortOrder } = query;
     if (page < 1 || limit < 1) {
         throw new AppError("Page and limit must be positive integers", 400);
     }
@@ -47,17 +47,25 @@ export const getVenuesService = async (query: GetVenuesInput, actor?: Actor) => 
         ...(ownerId ? { ownerId } : {}),
         ...(status ? { status } : {}),
         ...(city ? { city: { contains: city, mode: "insensitive" } } : {}),
+        ...(name ? { name: { contains: name, mode: "insensitive" } } : {}),
+        ...(type ? { resources: { some: { type: { contains: type, mode: "insensitive" } } } } : {}),
+
     }
+    const orderBy: Prisma.VenueOrderByWithRelationInput[] = [
+        { [sortBy]: sortOrder },
+        { id: "desc" },
+    ];
     const[ venues, total] = await prisma.$transaction([
         prisma.venue.findMany({
             where,
-            orderBy: [{ createdAt: "desc" }, { id: "desc" }], // urutan stabil untuk pagination
+            orderBy: orderBy, 
             skip: (page - 1) * limit,
             take: limit,
         }),
         prisma.venue.count({ where })
     ])
     return { venues, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
+
 }
 
 export const getVenueByIdService = async ({ id }: VenueIdParam, actor?: Actor) => {

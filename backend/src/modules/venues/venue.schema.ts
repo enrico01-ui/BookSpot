@@ -32,10 +32,16 @@ export const updateVenueSchema = venueBaseSchema.partial();
 
 export const getVenuesSchema = z.object({
   ownerId: z.coerce.number().int().positive().optional(),
+  name: z.string().trim().optional(),
+  type: z.string().trim().optional(),
+  sortBy: z.enum(["createdAt", "name", "updatedAt"])
+      .default("createdAt"),
+
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
   status: statusEnum.optional(),
   city: z.string().optional(),
   page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().positive().default(10),
+  limit: z.coerce.number().int().positive().max(50).default(10),
 });
 
 // 6. Admin Actions Schema
