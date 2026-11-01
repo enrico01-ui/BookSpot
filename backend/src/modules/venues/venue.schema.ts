@@ -8,27 +8,52 @@ export const venueIdParamSchema = z.object({
 });
 
 const venueBaseSchema = z.object({
-  name: z.string().trim().min(3, "Nama venue minimal 3 karakter").max(100),
-  address: z.string().trim().min(5, "Alamat minimal 5 karakter"),
-  city: z.string().trim().min(2, "Nama kota tidak valid"),
-  latitude: z
-    .number()
+  name: z.string()
+    .trim()
+    .min(3, "Nama venue minimal 3 karakter")
+    .max(100),
+
+  address: z.string()
+    .trim()
+    .min(5, "Alamat minimal 5 karakter"),
+
+  city: z.string()
+    .trim()
+    .min(2, "Nama kota tidak valid"),
+
+  latitude: z.number()
     .min(-90, "Latitude tidak valid")
     .max(90, "Latitude tidak valid")
-    .optional()
-    .nullable(),
-  longitude: z
-    .number()
+    .nullable()
+    .optional(),
+
+  longitude: z.number()
     .min(-180, "Longitude tidak valid")
     .max(180, "Longitude tidak valid")
-    .optional()
-    .nullable(),
-  description: z.string().trim().max(1000).optional().nullable(),
+    .nullable()
+    .optional(),
+
+  description: z.string()
+    .trim()
+    .max(1000)
+    .nullable()
+    .optional(),
 });
 
-export const createVenueSchema = venueBaseSchema;
+export const createVenueSchema = venueBaseSchema
+  .strict()
+  .refine(
+    (data) =>
+      (data.latitude == null) === (data.longitude == null),
+    {
+      message: "Latitude dan longitude harus diisi bersamaan",
+      path: ["latitude"],
+    },
+  );
 
-export const updateVenueSchema = venueBaseSchema.partial();
+export const updateVenueSchema = venueBaseSchema
+  .partial()
+  .strict();
 
 export const getVenuesSchema = z.object({
   ownerId: z.coerce.number().int().positive().optional(),
@@ -46,12 +71,25 @@ export const getVenuesSchema = z.object({
 
 // 6. Admin Actions Schema
 export const rejectVenueSchema = z.object({
-  reason: z.string().trim().min(5, "Alasan penolakan minimal 5 karakter"),
-});
+  reason: z.string()
+    .trim()
+    .min(5, "Alasan penolakan minimal 5 karakter")
+    .max(500, "Alasan penolakan maksimal 500 karakter"),
+}).strict();
+
+export const suspendVenueSchema = z.object({
+  reason: z.string()
+    .trim()
+    .min(5, "Alasan penangguhan minimal 5 karakter")
+    .max(500, "Alasan penangguhan maksimal 500 karakter"),
+}).strict();
+
+
 
 // Types Export
 export type CreateVenueInput = z.infer<typeof createVenueSchema>;
 export type UpdateVenueInput = z.infer<typeof updateVenueSchema>;
 export type GetVenuesInput = z.infer<typeof getVenuesSchema>;
 export type RejectVenueInput = z.infer<typeof rejectVenueSchema>;
+export type SuspendVenueInput = z.infer<typeof suspendVenueSchema>;
 export type VenueIdParam = z.infer<typeof venueIdParamSchema>;

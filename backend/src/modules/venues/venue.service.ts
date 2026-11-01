@@ -1,8 +1,11 @@
 
-import {CreateVenueInput, UpdateVenueInput, GetVenuesInput, VenueIdParam} from "./venue.schema.js";
+import {CreateVenueInput, UpdateVenueInput, GetVenuesInput, VenueIdParam, RejectVenueInput, SuspendVenueInput} from "./venue.schema.js";
 import { AppError } from "../../errors/appError.js";
 import { prisma } from "../../lib/prisma.js";
 import { Prisma } from "../../generated/prisma/browser.js";
+import { Prisma as Prism } from "../../generated/prisma/client.js";
+import { VenueStatus } from "../../generated/prisma/enums.js";
+import z from "zod";
 
 export interface Actor {
     id: number;
@@ -19,6 +22,9 @@ const visibleTo = (actor?: Actor): Prisma.VenueWhereInput => {
   if (actor) return { OR: [{ status: "PUBLISHED" }, { ownerId: actor.id }] };
   return { status: "PUBLISHED" };
 };
+
+
+
 
 export const createVenueService = async (data: CreateVenueInput, actor: Actor) => {
     const venue = await prisma.venue.create({
@@ -48,7 +54,7 @@ export const getVenuesService = async (query: GetVenuesInput, actor?: Actor) => 
         ...(status ? { status } : {}),
         ...(city ? { city: { contains: city, mode: "insensitive" } } : {}),
         ...(name ? { name: { contains: name, mode: "insensitive" } } : {}),
-        ...(type ? { resources: { some: { type: { contains: type, mode: "insensitive" } } } } : {}),
+        ...(type ? { resources: { some: { type: { contains: type, mode: "insensitive" }, deletedAt: null,} } } : {}),
 
     }
     const orderBy: Prisma.VenueOrderByWithRelationInput[] = [
@@ -96,3 +102,185 @@ export const deleteVenueService = async ({ id }: VenueIdParam, actor: Actor) => 
     select: { id: true },
   });
 };
+
+
+
+
+const validateVenueCompleteness = async (id: number, actor: Actor) => {
+  // Check if the venue is complete before allowing it to be published or pending approval also check photo, facilities, and resources, operating hours are not empty
+  const venue = await prisma.venue.findFirst({
+    where: {
+      id,
+      ...(
+        actor.role === "ADMIN"
+          ? {}
+          : { ownerId: actor.id }
+      ),
+      deletedAt: null,
+    },
+   select: {
+      name: true,
+      address: true,
+      city: true,
+      latitude: true,
+      longitude: true,
+      description: true,
+
+      images: {
+        select: {
+          id: true,
+          url: true,
+        },
+      },
+
+      facilities: true,
+
+      resources: {
+        select: {
+          id: true,
+          type: true,
+          name: true,
+          description: true,
+          basePrice: true,
+        },
+        where: {
+          deletedAt: null,
+          status: "ACTIVE",
+        },
+      },
+
+      operatingHours: true,
+    },
+  });
+
+
+  if (!venue) {
+    throw new AppError("Venue not found", 404);
+  }
+  
+  if (
+    !venue.name ||
+    !venue.address ||
+    !venue.city ||
+    venue.latitude == null ||
+    venue.longitude == null ||
+    !venue.description ||
+    venue.images.length === 0 ||
+    venue.facilities.length === 0 ||
+    venue.resources.length === 0 ||
+    venue.operatingHours.length === 0
+  ) {
+    throw new AppError("Venue is not complete", 400);
+  }
+  const price = venue.resources.reduce(
+    (acc, resource) => acc + (resource.basePrice?.toNumber() ?? 0),
+    0,
+  );
+  if (price <= 0) {
+    throw new AppError("Venue resources must have a total price greater than 0", 400);
+  }
+
+
+};
+
+const transitionVenueStatus = async (
+  id: number,
+  actor: Actor,
+  fromStatus: VenueStatus[],
+  toStatus: VenueStatus,
+  extraData: Prisma.VenueUpdateInput = {}
+) => {
+  try {
+    return await prisma.venue.update({
+      where: {
+        id,
+        deletedAt: null,
+        ...(actor.role === "ADMIN"
+          ? {}
+          : { ownerId: actor.id }),
+        status: {
+          in: fromStatus,
+        },
+      },
+      data: {
+        status: toStatus,
+        ...extraData,
+      },
+    });
+  } catch (error) {
+    if (
+      error instanceof Prism.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      throw new AppError(
+        "Venue not found or status transition is no longer valid",
+        409
+      );
+    }
+
+    throw error;
+  }
+};
+
+export const rejectVenueService = ({ id }: VenueIdParam, { reason }: RejectVenueInput, actor: Actor) => 
+   transitionVenueStatus(
+    id,
+    actor,
+    ["PENDING_APPROVAL"],
+    "REJECTED",
+    { rejectionReason: reason }
+  );
+
+
+export const suspendVenueService = ({ id }: VenueIdParam, { reason }: SuspendVenueInput, actor: Actor) => 
+  transitionVenueStatus(
+    id,
+    actor,
+    ["PUBLISHED"],
+    "SUSPENDED",
+    { suspensionReason: reason }
+  );
+
+
+export const publishVenueService = ({ id }: VenueIdParam, actor: Actor) => 
+  transitionVenueStatus(
+    id,
+    actor,
+    ["PENDING_APPROVAL"],
+    "PUBLISHED",
+    {
+      rejectionReason: null,
+      suspensionReason: null,
+    }
+  );
+  
+
+
+export const pendingApprovalVenueService = async ({ id }: VenueIdParam, actor: Actor) => {
+  await validateVenueCompleteness(id, actor);
+
+  return transitionVenueStatus(
+    id,
+    actor,
+    ["DRAFT"],
+    "PENDING_APPROVAL"
+  );
+}
+
+export const draftVenueService = ({ id }: VenueIdParam, actor: Actor) => 
+   transitionVenueStatus(
+    id,
+    actor,
+    ["PENDING_APPROVAL", "REJECTED"],
+    "DRAFT",
+    { rejectionReason: null }
+  );
+
+export const reactivateVenueService = ({ id }: VenueIdParam, actor: Actor) => 
+  transitionVenueStatus(
+    id,
+    actor,
+    ["SUSPENDED"],
+    "PUBLISHED",
+    { suspensionReason: null }
+  );

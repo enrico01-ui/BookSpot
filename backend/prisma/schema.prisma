@@ -204,7 +204,8 @@ model Venue {
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
   deletedAt   DateTime?   @map("deleted_at")
-
+  rejectionReason  String? @map("rejection_reason")
+  suspensionReason String? @map("suspension_reason")
   owner           User             @relation(fields: [ownerId], references: [id])
 
   images          VenueImage[]
