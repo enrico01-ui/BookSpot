@@ -1,11 +1,11 @@
 import jwt from "jsonwebtoken";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { app } from "../../app.js";
-import { env } from "../../config/env.js";
-import type { VenueStatus } from "../../generated/prisma/enums.js";
-import { prisma } from "../../lib/prisma.js";
-import { redis } from "../../lib/redis.js";
+import { app } from "../../../app.js";
+import { env } from "../../../config/env.js";
+import type { VenueStatus } from "../../../generated/prisma/enums.js";
+import { prisma } from "../../../lib/prisma.js";
+import { redis } from "../../../lib/redis.js";
 
 
 

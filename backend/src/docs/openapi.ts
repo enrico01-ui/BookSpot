@@ -407,5 +407,117 @@ export const openapiSpec = {
         },
       },
     },
+    "/api/venues/{id}/reject": {
+      post: {
+        tags: ["Venues"],
+        summary: "Reject venue by ID",
+        description: "Allowed roles: ADMIN",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: "path",
+            name: "id",
+            required: true,
+            schema: { type: "integer" },
+            description: "Venue ID",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/RejectVenueRequest" },
+            },
+          },
+        },
+        responses: {
+          "204": { description: "Venue rejected successfully." },
+          "400": { description: "Invalid request data." },
+          "401": { description: "Unauthorized." },
+          "403": { description: "Forbidden." },
+          "404": { description: "Venue not found." },
+        },
+      },
+    },
+    "/api/venues/{id}/suspend": {
+      post: {
+        tags: ["Venues"],
+        summary: "Suspend venue by ID",
+        description: "Allowed roles: ADMIN",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: "path",
+            name: "id",
+            required: true,
+            schema: { type: "integer" },
+            description: "Venue ID",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/SuspendVenueRequest" },
+            },
+          },
+        },
+        responses: {
+          "204": { description: "Venue suspended successfully." },
+          "400": { description: "Invalid request data." },
+          "401": { description: "Unauthorized." },
+          "403": { description: "Forbidden." },
+          "404": { description: "Venue not found." },
+        },
+      },
+    },
+    "/api/venues/{id}/publish": {
+      post: {
+        tags: ["Venues"],
+        summary: "Publish venue by ID",
+        description: "Allowed roles: ADMIN",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: "path",
+            name: "id",
+            required: true,
+            schema: { type: "integer" },
+            description: "Venue ID",
+          },
+        ],
+        responses: {
+          "204": { description: "Venue published successfully." },
+          "400": { description: "Invalid request data." },
+          "401": { description: "Unauthorized." },
+          "403": { description: "Forbidden." },
+          "404": { description: "Venue not found." },
+        },
+      },
+    },
+    "/api/venues/{id}/pending-approval": {
+      post: {
+        tags: ["Venues"],
+        summary: "Set venue to pending approval by ID",
+        description: "Allowed roles: OWNER",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: "path",
+            name: "id",
+            required: true,
+            schema: { type: "integer" },
+            description: "Venue ID",
+          },
+        ],
+        responses: {
+          "200": { description: "Venue set to pending approval successfully." },
+          "400": { description: "Invalid request data." },
+          "401": { description: "Unauthorized." },
+          "403": { description: "Forbidden." },
+          "404": { description: "Venue not found." },
+        },
+      },
+    },
   },
 };
