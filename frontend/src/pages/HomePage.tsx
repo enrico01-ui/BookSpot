@@ -50,12 +50,11 @@ export default function HomePage() {
         limit: getPositiveNumber(searchParams.get("limit"), 10),
     };
 
-    const [filterDraft, setFilterDraft] = useState<
-        Pick<GetVenuesQueryParams, "name" | "city">
-        >({
-        name: searchQuery.name ?? "",
-        city: searchQuery.city ?? "",
-    });
+    const urlName = searchQuery.name ?? "";
+    const urlCity = searchQuery.city ?? "";
+
+    const [filterDraft, setFilterDraft] = useState({ name: urlName, city: urlCity });
+    const [syncedUrl, setSyncedUrl] = useState({ name: urlName, city: urlCity });
 
     const { 
         data: venues,
@@ -67,12 +66,10 @@ export default function HomePage() {
 
     // Sinkronkan input ketika URL berubah,
     // termasuk ketika pengguna menekan Back/Forward.
-    useEffect(() => {
-        setFilterDraft({
-            name: searchQuery.name ?? "",
-            city: searchQuery.city ?? "",
-        });
-    }, [searchParams]);
+    if (syncedUrl.name !== urlName || syncedUrl.city !== urlCity) {
+        setSyncedUrl({ name: urlName, city: urlCity });
+        setFilterDraft({ name: urlName, city: urlCity });
+    }
 
     const updateUrlParams = (
         updates: Record<string, string | number | undefined>
@@ -298,7 +295,10 @@ export default function HomePage() {
                             Memperbarui daftar venue...
                         </p>
                         )}
-                        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                        <div aria-busy={isPlaceholderData}
+                            className={`grid grid-cols-1 gap-5 transition-opacity sm:grid-cols-2 lg:grid-cols-3 ${
+                                isPlaceholderData ? "opacity-60" : ""
+                            }`}>
                             {venues.venues.map((venue, index) => (
                                 <VenueCard key={venue.id} venue={venue} index={index} />
                             ))}
