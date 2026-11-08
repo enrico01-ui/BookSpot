@@ -1,13 +1,13 @@
 import {Routes, Route, BrowserRouter} from "react-router-dom";
 import HomePage from "../pages/HomePage";
-import Dashboard from "../pages/Dashboard";
-import RegisterPage from "../pages/RegisterPage";
-import LoginPage from "../pages/LoginPage";
-import VenuesPage from "../pages/VenuesPage";
+import Dashboard from "../pages/Dashboard/Dashboard";
+import RegisterPage from "../pages/Auth/RegisterPage";
+import LoginPage from "../pages/Auth/LoginPage";
+import VenuesPage from "../pages/Venue/VenuesPage";
 import MainLayout from "../layout/MainLayout";
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 // import RoleGuard from "../components/auth/RoleGuard";
-import ProfilPage from "../pages/ProfilPage";
+import ProfilPage from "../pages/Profile/ProfilPage";
 
 export default function AppRouter() {
     return (

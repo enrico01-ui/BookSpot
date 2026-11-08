@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend-test:
     name: Backend Tests
@@ -79,14 +83,14 @@ jobs:
       
       
       - name: Run database migrations
-        run: node --env-file=.env.test ./node_modules/prisma/build/index.js migrate deploy
+        run: npm run test:db:migrate
 
 
       - name: Run backend tests
         run: npm test
 
-  frontend-build:
-    name: Frontend Build
+  frontend-check:
+    name: Frontend (lint, test, build)
     runs-on: ubuntu-latest
 
     defaults:
@@ -96,16 +100,108 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+ 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
+ 
       - name: Install dependencies
         run: npm ci
-
+ 
+      - name: Lint
+        run: npm run lint
+ 
+      - name: Unit and integration tests
+        run: npm test
+ 
       - name: Build frontend
         run: npm run build
+ 
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    # Jalan hanya kalau backend dan frontend sudah lulus, supaya tidak membuang waktu
+    needs: [backend-test, frontend-check]
+ 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bookspot_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bookspot_e2e"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+ 
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+ 
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+ 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+ 
+      - name: Create backend test environment
+        working-directory: backend
+        shell: bash
+        run: |
+          cat > .env.test <<'EOF'
+          NODE_ENV=test
+          PORT=4000
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/bookspot_e2e
+          REDIS_URL=redis://localhost:6379
+          CORS_ORIGIN=http://localhost:5173
+          JWT_SECRET=ci-only-jwt-secret-not-for-production
+          REFRESH_SECRET=ci-only-refresh-secret-not-for-production
+          EOF
+ 
+      - name: Backend - install, migrate, seed
+        working-directory: backend
+        run: |
+          npm ci
+          npx prisma generate
+          npm run test:db:migrate
+          npm run test:db:seed
+ 
+      - name: Frontend - install
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+ 
+      - name: Run Playwright
+        working-directory: frontend
+        env:
+          CI: true
+        run: npx playwright test
+ 
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report
+          retention-days: 7

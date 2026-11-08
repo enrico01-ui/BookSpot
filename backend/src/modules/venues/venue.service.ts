@@ -61,16 +61,51 @@ export const getVenuesService = async (query: GetVenuesInput, actor?: Actor) => 
         { [sortBy]: sortOrder },
         { id: "desc" },
     ];
+    const venueCardSelect = {
+      id: true, ownerId: true, name: true, city: true, address: true,
+      latitude: true, longitude: true, status: true, createdAt: true,
+      images: { select: { url: true }, orderBy: { sortOrder: "asc" }, take: 1 },
+      facilities: { select: { facility: { select: { id: true, name: true } } } },
+      resources: {
+        where: { deletedAt: null, status: "ACTIVE" },
+        select: { type: true, basePrice: true },
+      },
+    } satisfies Prisma.VenueSelect;
     const[ venues, total] = await prisma.$transaction([
         prisma.venue.findMany({
             where,
+            select: venueCardSelect,
             orderBy: orderBy, 
             skip: (page - 1) * limit,
             take: limit,
         }),
         prisma.venue.count({ where })
     ])
-    return { venues, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
+    const ratings = await prisma.review.groupBy({
+      by: ["venueId"],
+      where: { venueId: { in: venues.map((v) => v.id) } },
+      _avg: { rating: true },
+      _count: { _all: true },
+    });
+    const ratingMap = new Map(ratings.map((r) => [r.venueId, r]));
+
+    const data = venues.map(({ images, facilities, resources, ...v }) => {
+      const r = ratingMap.get(v.id);
+      return {
+        ...v,
+        thumbnail: images[0]?.url ?? null,
+        facilities: facilities.map((f) => f.facility.name),
+        resourceTypes: [...new Set(resources.map((x) => x.type))],
+        startingPrice: resources.length ? Math.min(...resources.map((x) => Number(x.basePrice))) : null,
+        totalResources: resources.length,
+        rating: {
+          average: r?._avg.rating ? Number(r._avg.rating.toFixed(1)) : null,
+          count: r?._count._all ?? 0,
+        },
+      };
+    });
+
+    return { venues:data, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
 
 }
 

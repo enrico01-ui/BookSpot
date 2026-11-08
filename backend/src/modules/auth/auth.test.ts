@@ -74,9 +74,9 @@ describe("POST /api/auth/register", () => {
       .post("/api/auth/register")
       .send(userData);
 
-    // Controller register saat ini mengembalikan 400
+   
     // ketika proses registrasi gagal.
-    expect(secondResponse.status).toBe(400);
+    expect(secondResponse.status).toBe(409);
 
     // Pastikan hanya satu user dengan email tersebut.
     const userCount = await prisma.user.count({
