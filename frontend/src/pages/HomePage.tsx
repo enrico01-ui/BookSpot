@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useVenues } from "../features/venues/venue.queries";
 import type { GetVenuesQueryParams } from "../types/venue";
