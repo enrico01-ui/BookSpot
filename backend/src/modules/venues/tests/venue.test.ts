@@ -96,10 +96,18 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // Hanya venue milik user uji yang dihapus. User dibiarkan karena database test memang sekali pakai.
-  await prisma.venue.deleteMany({ where: { owner: { email: { endsWith: EMAIL_SUFFIX } } } });
-  await prisma.$disconnect();
-  await redis.quit();
+  try {
+    const owned = { owner: { email: { endsWith: EMAIL_SUFFIX } } };
+
+    // Urutan penting: resource dulu (relasinya ke venue tidak cascade), baru venue.
+    await prisma.resource.deleteMany({ where: { venue: owned } });
+    await prisma.venue.deleteMany({ where: owned });
+  } finally {
+    // Tanpa finally, kegagalan di atas membuat koneksi tidak pernah ditutup
+    // dan proses Vitest bisa menggantung.
+    await prisma.$disconnect();
+    await redis.quit();
+  }
 });
 
 /* ============================================================================ */
@@ -421,11 +429,19 @@ describe("Filtering", () => {
     expect(res.body.venues.every((v: { name: string }) => v.name.toLowerCase().includes("1"))).toBe(true);
   });
   
-it("filter by type → hanya yang mengandung substring (case-insensitive)", async () => {
-    const res = await request(app).get(`/api/venues?city=${PAGE_CITY}&type=conference&limit=50`);
+  it("filter by type → hanya venue yang punya resource bertipe itu", async () => {
+    const typed = await seedVenue(ownerA.id, nameOf("Punya Tipe"), { status: "PUBLISHED" });
+    await prisma.resource.create({
+      data: { venueId: typed.id, name: "Unit A", type: "FUTSAL", basePrice: 100000 }, // pakai tipe yang valid di schema-mu
+    });
+
+    const res = await request(app).get(`/api/venues?city=${CITY}&type=futsal&limit=50`);
+    const ids = res.body.venues.map((v: { id: number }) => v.id);
+
     expect(res.status).toBe(200);
-    expect(res.body.venues.every((v: { type: string }) => v.type.toLowerCase().includes("conference"))).toBe(true);
-  })
+    expect(ids).toContain(typed.id);
+    expect(ids).not.toContain(aPublishedId); // venue tanpa resource bertipe itu
+  });
 });
 
 /* Item yang belum diterapkan: akan menjadi test setelah kodenya ada. */

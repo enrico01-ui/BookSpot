@@ -2,6 +2,7 @@ import { Link, Outlet} from 'react-router-dom'
 import Navbar from '../components/ui/navbar'
 
 export default function MainLayout() {
+    const CURRENT_YEAR = new Date().getFullYear();
     return (
         <div>
             <Navbar />
@@ -84,7 +85,7 @@ export default function MainLayout() {
                 {/* Bottom */}
                 <div className="mt-12 flex flex-col gap-3 border-t border-white/15 pt-6 text-xs text-on-dark sm:flex-row sm:items-center sm:justify-between">
                     <p>
-                    © {new Date().getFullYear()} BookSpot. All rights reserved.
+                    © {CURRENT_YEAR} BookSpot. All rights reserved.
                     </p>
 
                     <p>

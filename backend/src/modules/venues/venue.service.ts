@@ -62,7 +62,7 @@ export const getVenuesService = async (query: GetVenuesInput, actor?: Actor) => 
         { id: "desc" },
     ];
     const venueCardSelect = {
-      id: true, name: true, city: true, address: true,
+      id: true, ownerId: true, name: true, city: true, address: true,
       latitude: true, longitude: true, status: true, createdAt: true,
       images: { select: { url: true }, orderBy: { sortOrder: "asc" }, take: 1 },
       facilities: { select: { facility: { select: { id: true, name: true } } } },
