@@ -6,12 +6,13 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    
     "test:db:migrate": "node --env-file=.env.test ./node_modules/prisma/build/index.js migrate deploy",
     "test": "node --env-file=.env.test ./node_modules/vitest/vitest.mjs run",
     "test:watch": "node --env-file=.env.test ./node_modules/vitest/vitest.mjs",
-    "test:int": "node --env-file=.env.test ./node_modules/vitest/vitest.mjs run"
-
+    "test:int": "node --env-file=.env.test ./node_modules/vitest/vitest.mjs run",
+    "db:seed": "tsx prisma/seed.ts",
+    "test:db:seed": "npx tsx --env-file=.env.test prisma/seed.ts",
+    "dev:e2e": "tsx --env-file-if-exists=.env.test src/server.ts"
   },
   "keywords": [],
   "author": "",

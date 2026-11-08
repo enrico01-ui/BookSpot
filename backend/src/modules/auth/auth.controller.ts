@@ -8,21 +8,25 @@ import {
 
 
 export const registerUser = async (req: Request, res: Response) => {
-    try{
+    try {
         const user = await registerService(req.body);
-
+ 
         res.status(201).json({
             message: "User registered successfully",
             user,
         });
-    }catch (error) {
-        res.status(400).json({
-            message: "User registration failed",
-            error: (error as Error).message,
-        });
+    } catch (error) {
+        // P2002 = unique constraint (email sudah dipakai)
+        if ((error as { code?: string }).code === "P2002") {
+            return res.status(409).json({ message: "Email already registered" });
+        }
+ 
+        // Jangan kirim error.message mentah ke client (bisa membocorkan detail Prisma/SQL)
+        console.error("registerUser failed:", error);
+        res.status(500).json({ message: "User registration failed" });
     }
-  
 };
+ 
 
 export const updateUser = async (req: Request, res: Response) => {
     try{

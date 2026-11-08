@@ -80,7 +80,10 @@ enum NotificationType {
   BOOKING_REMINDER
   SYSTEM
 }
-
+enum ResourceSetting {
+  INDOOR
+  OUTDOOR
+}
 enum AuditAction {
   CREATE
   UPDATE
@@ -310,6 +313,7 @@ model Resource {
   name        String
   type        String
   description String?
+  setting     ResourceSetting?
 
   basePrice   Decimal        @map("base_price") @db.Decimal(12, 2)
 

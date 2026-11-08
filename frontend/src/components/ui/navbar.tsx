@@ -24,7 +24,7 @@ export default function Navbar() {
     //cara cekapakah user sudah login atau belum
     const { user, logout, isAuthenticated } = useAuth();
     const navigate = useNavigate();
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleLogin = () => {
         setIsLoading(true);
